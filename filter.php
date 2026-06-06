@@ -23,12 +23,8 @@ class filter_vimeotracker extends moodle_text_filter {
                 }
             }
 
-            // CORRECCIÓN: Usar js_from_url que es el método oficial de Moodle
-            static $sdk_loaded = false;
-            if (!$sdk_loaded) {
-                $PAGE->requires->js_from_url('https://player.vimeo.com/api/player.js', false);
-                $sdk_loaded = true;
-            }
+            // Inyectar el SDK de Vimeo de forma segura como HTML puro para evitar errores de Moodle
+            $text = '<script src="https://player.vimeo.com/api/player.js"></script>' . $text;
 
             foreach ($vimeo_ids as $vimeo_id) {
                 $last_position = 0;
