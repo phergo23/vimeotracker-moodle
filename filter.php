@@ -3,7 +3,7 @@ defined('MOODLE_INTERNAL') || die();
 
 class filter_vimeotracker extends moodle_text_filter {
     public function filter($text, array $options = array()) {
-        global $PAGE, $DB, $USER;
+        global $PAGE;
 
         // Si no hay menciones a Vimeo, retornar el texto original rápido
         if (stripos($text, 'vimeo.com') === false) {
@@ -23,26 +23,13 @@ class filter_vimeotracker extends moodle_text_filter {
                 }
             }
 
-            // Inyectar el SDK de Vimeo de forma segura como HTML puro para evitar errores de Moodle
+            // Inyectar el SDK oficial de Vimeo de forma segura como HTML puro
             $text = '<script src="https://player.vimeo.com/api/player.js"></script>' . $text;
 
             foreach ($vimeo_ids as $vimeo_id) {
-                $last_position = 0;
-                if (isloggedin()) {
-                    $progress = $DB->get_record('filter_vimeotracker_time', array(
-                        'userid' => $USER->id, 
-                        'vimeo_id' => $vimeo_id,
-                        'courseid' => $courseid
-                    ), 'last_position');
-                    if ($progress) {
-                        $last_position = $progress->last_position;
-                    }
-                }
-
                 // Inyectar el script que controla el reproductor de Vimeo
                 $PAGE->requires->js_call_amd('filter_vimeotracker/vimeo_injector', 'attach', array(
                     'vimeoId' => $vimeo_id,
-                    'lastPosition' => (float)$last_position,
                     'courseId' => (int)$courseid
                 ));
             }
