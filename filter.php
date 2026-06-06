@@ -22,13 +22,18 @@ class filter_vimeotracker extends moodle_text_filter {
             foreach ($vimeo_ids as $vimeo_id) {
                 $last_position = 0;
                 if ($userid > 0) {
-                    $progress = $DB->get_record('filter_vimeotracker_time', array(
-                        'userid' => $userid,
-                        'vimeo_id' => $vimeo_id,
-                        'courseid' => $courseid
-                    ), 'last_position');
-                    if ($progress) {
-                        $last_position = $progress->last_position;
+                    // Validar si la tabla existe antes de consultar para evitar caídas de página
+                    try {
+                        $progress = $DB->get_record('filter_vimeotracker_time', array(
+                            'userid' => $userid,
+                            'vimeo_id' => $vimeo_id,
+                            'courseid' => $courseid
+                        ), 'last_position');
+                        if ($progress) {
+                            $last_position = $progress->last_position;
+                        }
+                    } catch (\Exception $e) {
+                        $last_position = 0;
                     }
                 }
                 $video_configs[] = array(
@@ -63,25 +68,23 @@ class filter_vimeotracker extends moodle_text_filter {
 
                             var lastSavedTime = -1;
 
-                            // USAR EL MOTOR NATIVO DE MOODLE: Requiere invocar core/ajax de forma segura
+                            // LLAMADA DIRECTA: Apuntar a nuestro propio archivo guardar.php de forma nativa
                             function guardarProgresoServidor(segundosActuales) {
-                                if (typeof window.require !== "undefined") {
-                                    window.require([\'core/ajax\'], function(ajax) {
-                                        ajax.call([{
-                                            methodname: \'filter_vimeotracker_save_progress\',
-                                            args: {
-                                                vimeoId: String(id),
-                                                courseId: parseInt(courseId),
-                                                seconds: parseFloat(segundosActuales)
-                                            }
-                                        }]);
-                                    });
-                                }
+                                var destinoUrl = M.cfg.wwwroot + \'/filter/vimeotracker/guardar.php\';
+                                
+                                fetch(destinoUrl, {
+                                    method: \'POST\',
+                                    headers: { \'Content-Type\': \'application/json\' },
+                                    body: JSON.stringify({
+                                        vimeoId: String(id),
+                                        courseId: parseInt(courseId),
+                                        seconds: parseFloat(segundosActuales)
+                                    })
+                                }).catch(function(e) {});
                             }
 
                             player.on(\'timeupdate\', function(data) {
                                 var currentTime = Math.floor(data.seconds);
-                                // Guardar cada 4 segundos exactos
                                 if (currentTime % 4 === 0 && currentTime !== lastSavedTime) {
                                     lastSavedTime = currentTime;
                                     guardarProgresoServidor(data.seconds);
