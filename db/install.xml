@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="filter/vimeotracker/db" VERSION="20260605" COMMENT="Tabla para guardar el progreso global de Vimeo por usuario"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+    <TABLES>
+        <TABLE NAME="filter_vimeotracker_time" COMMENT="Guarda el segundo exacto donde quedo el alumno">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="ID del alumno"/>
+                <FIELD NAME="vimeo_id" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false" COMMENT="ID del video de Vimeo"/>
+                <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="ID del curso de Moodle"/>
+                <FIELD NAME="last_position" TYPE="number" LENGTH="10" DECIMALS="2" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+            </KEYS>
+            <INDEXS>
+                <INDEX NAME="user_vimeo_course" UNIQUE="true" FIELDS="userid, vimeo_id, courseid"/>
+            </INDEXS>
+        </TABLE>
+    </TABLES>
+</XMLDB>
