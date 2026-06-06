@@ -63,29 +63,25 @@ class filter_vimeotracker extends moodle_text_filter {
 
                             var lastSavedTime = -1;
 
-                            // Función interna para despachar los datos formateados al servidor
+                            // USAR EL MOTOR NATIVO DE MOODLE: Requiere invocar core/ajax de forma segura
                             function guardarProgresoServidor(segundosActuales) {
-                                var wsUrl = M.cfg.wwwroot + \'/lib/ajax/service.php?sesskey=\' + M.cfg.sesskey + \'&info=filter_vimeotracker_save_progress\';
-                                var datos = [{
-                                    index: 0,
-                                    methodname: \'filter_vimeotracker_save_progress\',
-                                    args: {
-                                        vimeoId: String(id),
-                                        courseId: parseInt(courseId),
-                                        seconds: parseFloat(segundosActuales)
-                                    }
-                                }];
-
-                                // Enviar los datos simulando la estructura exacta de Moodle AJAX
-                                var xhr = new XMLHttpRequest();
-                                xhr.open(\'POST\', wsUrl, true);
-                                xhr.setRequestHeader(\'Content-Type\', \'application/json\');
-                                xhr.send(JSON.stringify(datos));
+                                if (typeof window.require !== "undefined") {
+                                    window.require([\'core/ajax\'], function(ajax) {
+                                        ajax.call([{
+                                            methodname: \'filter_vimeotracker_save_progress\',
+                                            args: {
+                                                vimeoId: String(id),
+                                                courseId: parseInt(courseId),
+                                                seconds: parseFloat(segundosActuales)
+                                            }
+                                        }]);
+                                    });
+                                }
                             }
 
                             player.on(\'timeupdate\', function(data) {
                                 var currentTime = Math.floor(data.seconds);
-                                // Guardar estrictamente cada 4 segundos para optimizar recursos
+                                // Guardar cada 4 segundos exactos
                                 if (currentTime % 4 === 0 && currentTime !== lastSavedTime) {
                                     lastSavedTime = currentTime;
                                     guardarProgresoServidor(data.seconds);
