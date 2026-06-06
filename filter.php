@@ -18,13 +18,9 @@ class filter_vimeotracker extends moodle_text_filter {
             $antitrampa_config = get_config('filter_vimeotracker', 'activar_antitrampa');
             $activar_antitrampa = !empty($antitrampa_config) ? 'true' : 'false';
 
-            // Variable que acumulará las configuraciones de cada video cargado en esta pagina
             $video_configs = array();
-
             foreach ($vimeo_ids as $vimeo_id) {
                 $last_position = 0;
-                
-                // EXTRAER DEL SERVIDOR: Buscar el progreso guardado real en la base de datos global
                 if ($userid > 0) {
                     $progress = $DB->get_record('filter_vimeotracker_time', array(
                         'userid' => $userid,
@@ -35,7 +31,6 @@ class filter_vimeotracker extends moodle_text_filter {
                         $last_position = $progress->last_position;
                     }
                 }
-
                 $video_configs[] = array(
                     'vimeoId' => $vimeo_id,
                     'lastPosition' => (float)$last_position
@@ -57,46 +52,43 @@ class filter_vimeotracker extends moodle_text_filter {
 
                         var player = new Vimeo.Player(iframe);
                         player.getVideoId().then(function(id) {
-                            
-                            // Encontrar la configuracion de tiempo asignada por el servidor para este video
                             var currentConfig = videoConfigs.find(function(c) { return String(c.vimeoId) === String(id); });
                             if (!currentConfig) return;
 
                             iframe.classList.add(\'vt-ready\');
 
-                            // 1. REANUDACIÓN GLOBAL: El servidor nos dice en que segundo ponerlo
                             if (currentConfig.lastPosition > 0) {
                                 player.setCurrentTime(currentConfig.lastPosition).catch(function(err) {});
                             }
 
-                            // Variable para controlar ráfagas y no saturar tu servidor (guarda cada 4 segundos)
-                            var lastSavedTime = 0;
+                            var lastSavedTime = -1;
 
-                            // 2. GUARDADO EN EL SERVIDOR VIA AJAX NATIVO DE MOODLE
+                            // Función interna para despachar los datos formateados al servidor
+                            function guardarProgresoServidor(segundosActuales) {
+                                var wsUrl = M.cfg.wwwroot + \'/lib/ajax/service.php?sesskey=\' + M.cfg.sesskey + \'&info=filter_vimeotracker_save_progress\';
+                                var datos = [{
+                                    index: 0,
+                                    methodname: \'filter_vimeotracker_save_progress\',
+                                    args: {
+                                        vimeoId: String(id),
+                                        courseId: parseInt(courseId),
+                                        seconds: parseFloat(segundosActuales)
+                                    }
+                                }];
+
+                                // Enviar los datos simulando la estructura exacta de Moodle AJAX
+                                var xhr = new XMLHttpRequest();
+                                xhr.open(\'POST\', wsUrl, true);
+                                xhr.setRequestHeader(\'Content-Type\', \'application/json\');
+                                xhr.send(JSON.stringify(datos));
+                            }
+
                             player.on(\'timeupdate\', function(data) {
                                 var currentTime = Math.floor(data.seconds);
-                                
-                                // Guardar solo si ha avanzado 4 segundos desde el ultimo registro para cuidar el rendimiento
+                                // Guardar estrictamente cada 4 segundos para optimizar recursos
                                 if (currentTime % 4 === 0 && currentTime !== lastSavedTime) {
                                     lastSavedTime = currentTime;
-
-                                    // Llamada directa al motor AJAX de tu Moodle
-                                    var wsUrl = M.cfg.wwwroot + \'/lib/ajax/service.php?sesskey=\' + M.cfg.sesskey;
-                                    var payload = [{
-                                        index: 0,
-                                        methodname: \'filter_vimeotracker_save_progress\',
-                                        args: {
-                                            vimeoId: String(id),
-                                            courseId: parseInt(courseId),
-                                            seconds: parseFloat(data.seconds)
-                                        }
-                                    }];
-
-                                    fetch(wsUrl, {
-                                        method: \'POST\',
-                                        headers: { \'Content-Type\': \'application/json\' },
-                                        body: json_encode_moodle_payload(payload)
-                                    }).catch(function(e) {});
+                                    guardarProgresoServidor(data.seconds);
                                 }
                             });
 
@@ -105,14 +97,7 @@ class filter_vimeotracker extends moodle_text_filter {
                                     if (document.hidden) {
                                         player.pause();
                                         player.setCurrentTime(0).then(function() {
-                                            // Si hace trampa, avisar al servidor de inmediato que su tiempo volvio a 0
-                                            var wsUrl = M.cfg.wwwroot + \'/lib/ajax/service.php?sesskey=\' + M.cfg.sesskey;
-                                            var payload = [{
-                                                index: 0,
-                                                methodname: \'filter_vimeotracker_save_progress\',
-                                                args: { vimeoId: String(id), courseId: parseInt(courseId), seconds: 0 }
-                                            }];
-                                            fetch(wsUrl, { method: \'POST\', headers: { \'Content-Type\': \'application/json\' }, body: json_encode_moodle_payload(payload) });
+                                            guardarProgresoServidor(0);
                                             alert("El video se reinició automáticamente por salir de la pantalla de estudio.");
                                         });
                                     }
@@ -121,8 +106,6 @@ class filter_vimeotracker extends moodle_text_filter {
                         }).catch(function(e) {});
                     });
                 }
-
-                function json_encode_moodle_payload(obj) { return JSON.stringify(obj); }
 
                 setTimeout(initVimeoTracker, 1000);
                 setTimeout(initVimeoTracker, 3000);
