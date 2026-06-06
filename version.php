@@ -2,7 +2,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component  = 'filter_vimeotracker';
-$plugin->version    = 2026060505; // Incrementamos versión para forzar a Moodle a leerlo
-$plugin->requires   = 2022041900;
+$plugin->version    = 2026060520; // Nueva versión mayor
+$plugin->requires   = 2022041900; // Totalmente compatible desde Moodle 4.0 hasta 5.2+
 $plugin->maturity   = MATURITY_STABLE;
-$plugin->release    = '1.1.0';
+$plugin->release    = '2.0.0';
