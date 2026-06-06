@@ -6,7 +6,6 @@ defined('MOODLE_INTERNAL') || die();
 use external_api;
 use external_function_parameters;
 use external_value;
-use complementario;
 
 class save_progress extends external_api {
     
@@ -41,12 +40,12 @@ class save_progress extends external_api {
         ));
 
         if ($record) {
-            // Si el alumno adelanta o ve mas, actualizamos el servidor
+            // Si ya existe, actualizamos su posicion en la base de datos
             $record->last_position = $seconds;
             $record->timemodified = time();
             $DB->update_record('filter_vimeotracker_time', $record);
         } else {
-            // Si es la primera vez que abre el video, creamos el registro
+            // Si es la primera vez que ve el video, creamos el registro en PostgreSQL
             $newrecord = new \stdClass();
             $newrecord->userid = $userid;
             $newrecord->vimeo_id = $vimeoId;
@@ -56,7 +55,7 @@ class save_progress extends external_api {
             $DB->insert_record('filter_vimeotracker_time', $newrecord);
         }
 
-        return array('status' => 'success');
+        return array('status' => 'success', 'message' => 'Guardado exitoso');
     }
 
     public static function execute_returns() {
